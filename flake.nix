@@ -10,17 +10,24 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
+        llvm = pkgs.llvmPackages_18;
       in
       {
         devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            cmake
-            gcc
-            ninja
-            git
-            pkg-config
-            lldb
-            coreutils
+          nativeBuildInputs = [
+            pkgs.cmake
+            pkgs.ninja
+            pkgs.pkg-config
+            llvm.clang 
+            llvm.clang-tools 
+          ];
+
+          buildInputs = [
+            pkgs.git
+            pkgs.lldb
+            pkgs.coreutils
+          ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+            pkgs.apple-sdk_14
           ];
         };
       });
