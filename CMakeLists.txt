@@ -36,6 +36,7 @@ endif()
 
 set(STEINER_SRC
     types.cpp
+    graph.cpp
     algo.cpp
     main.cpp
 )
