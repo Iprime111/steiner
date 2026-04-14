@@ -1,7 +1,6 @@
 #pragma once
 
 #include "fmt/base.h"
-#include "log.hpp"
 #include "types.hpp"
 
 #include <fmt/format.h>

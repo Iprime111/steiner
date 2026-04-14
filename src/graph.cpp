@@ -1,4 +1,6 @@
 #include "graph.hpp"
+#include "log.hpp"
+#include "types.hpp"
 
 namespace steiner {
 DefaultGraph json_to_graph(const JsonGraph& json) {

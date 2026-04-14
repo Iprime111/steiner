@@ -77,17 +77,38 @@ class MSTSolver final {
     DefaultGraph& graph_;
 };
 
-class Basic1SteinerAlgo final {
+class Basic1SteinerAlgo {
   public:
     Basic1SteinerAlgo(DefaultGraph& graph) : graph_(graph) {}
+    virtual ~Basic1SteinerAlgo() = default;
+    
+    Distance compute();
 
-    void compute();
+  protected:
+    Distance compute_cost_with_candidate(Point coord, MSTSolver& mst) ;
+    void remove_bad_stenier_points();
 
   private:
     std::pair<Point, bool> choose_candidate(const HananGrid& grid, MSTSolver& mst);
-    void remove_bad_stenier_points();
-
+    
+  protected:
     DefaultGraph& graph_;
+};
+
+class Batched1SteinerAlgo final : protected Basic1SteinerAlgo {
+  using Base = Basic1SteinerAlgo;
+  
+  public:
+    Batched1SteinerAlgo(DefaultGraph& graph) : Base(graph) {}
+    virtual ~Batched1SteinerAlgo() override = default;
+    
+    Distance compute();
+    
+  private:
+    std::vector<Point> generate_batch(const HananGrid& grid, MSTSolver& mst);
+    std::vector<NodeId> get_affected(NodeId candidate);
+    
+    Graph<Point, DefaultEdgeData> conflict_graph_;
 };
 
 class GraphVerifier final {
@@ -97,20 +118,18 @@ class GraphVerifier final {
         std::vector<std::pair<NodeId, std::string>> bad_nodes;
         std::string comment;
     };
-  
+
     GraphVerifier(const DefaultGraph& graph) : graph_(graph) {}
     Review verify();
-    
-  private:    
+
+  private:
     const DefaultGraph& graph_;
 };
 }  // namespace steiner
 
 template <>
 struct fmt::formatter<steiner::GraphVerifier::Review> {
-    constexpr auto parse(format_parse_context& ctx) {
-        return ctx.begin();
-    }
+    constexpr auto parse(format_parse_context& ctx) { return ctx.begin(); }
 
     auto format(const steiner::GraphVerifier::Review& r, format_context& ctx) const {
         if (r.passed) {
@@ -118,9 +137,8 @@ struct fmt::formatter<steiner::GraphVerifier::Review> {
         }
 
         auto out = fmt::format_to(ctx.out(), "Graph check failed\n");
-        
-        out = fmt::format_to(out, "Comment: {}\n", 
-                                   r.comment.empty() ? "No comment" : r.comment);
+
+        out = fmt::format_to(out, "Comment: {}\n", r.comment.empty() ? "No comment" : r.comment);
 
         if (!r.bad_nodes.empty()) {
             out = fmt::format_to(out, "Node-specific issues:");

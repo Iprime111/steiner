@@ -1,8 +1,9 @@
 #include "algo.hpp"
-#include "fmt/base.h"
-#include "fmt/format.h"
+#include "log.hpp"
 #include "types.hpp"
 
+#include <fmt/format.h>
+#include <functional>
 #include <ranges>
 #include <utility>
 #include <vector>
@@ -13,10 +14,8 @@ Distance MSTSolver::compute() {
         return 0;
     }
 
-    if (graph_.edges_count() != 0) {
-        LOG_CRITICAL("MST solver works only for graphs without any edges");
-    }
-
+    graph_.clear_edges();
+    
     node_info_.clear();
     Distance total_cost = 0;
 
@@ -77,7 +76,7 @@ void MSTSolver::update_node_info(NodeId min_dist_node) {
     }
 }
 
-void Basic1SteinerAlgo::compute() {
+Distance Basic1SteinerAlgo::compute() {
     MSTSolver mst{graph_};
 
     auto points = graph_.node_data() | std::views::transform([](auto&& data) { return data.coord; });
@@ -95,43 +94,42 @@ void Basic1SteinerAlgo::compute() {
             .type = NodeType::kSteinerPoint,
         });
         grid.occupy(candidate);
-
-        graph_.clear_edges();
         mst.compute();
 
-        // remove_bad_stenier_points();
+        remove_bad_stenier_points();
     }
 
-    graph_.clear_edges();
-    mst.compute();
+    return mst.compute();
 }
 
 std::pair<Point, bool> Basic1SteinerAlgo::choose_candidate(const HananGrid& grid, MSTSolver& mst) {
     Point best_x;
     Distance max_delta = 0;
 
-    graph_.clear_edges();
     auto current_cost = mst.compute();
 
     for (const auto& coord : grid.get_candidates()) {
-        auto candidate_id = graph_.add_node({
-            .coord = coord,
-            .type = NodeType::kSteinerPoint,
-        });
-
-        graph_.clear_edges();
-        auto new_cost = mst.compute();
-        auto delta = current_cost - new_cost;
-
+        auto delta = current_cost - compute_cost_with_candidate(coord, mst);
+        
         if (delta > max_delta) {
             max_delta = delta;
             best_x = coord;
         }
-
-        graph_.remove_node(candidate_id);
     }
 
     return std::make_pair(best_x, max_delta > 0);
+}
+
+Distance Basic1SteinerAlgo::compute_cost_with_candidate(Point coord, MSTSolver& mst) {
+    auto candidate_id = graph_.add_node({
+        .coord = coord,
+        .type = NodeType::kSteinerPoint,
+    });
+
+    auto new_cost = mst.compute();
+    graph_.remove_node(candidate_id);
+    
+    return new_cost;
 }
 
 void Basic1SteinerAlgo::remove_bad_stenier_points() {
@@ -148,6 +146,94 @@ void Basic1SteinerAlgo::remove_bad_stenier_points() {
     for (auto id : remove_list) {
         graph_.remove_node(id);
     }
+}
+
+Distance Batched1SteinerAlgo::compute() {
+    MSTSolver mst{graph_};
+
+    auto points = graph_.node_data() | std::views::transform([](auto&& data) { return data.coord; });
+    HananGrid grid{points};
+
+    while (true) {
+        auto candidates = generate_batch(grid, mst);
+
+        if (candidates.empty()) {
+            break;
+        }
+
+        for (auto&& candidate : candidates) {
+            graph_.add_node({
+                .coord = std::move(candidate),
+                .type = NodeType::kSteinerPoint,
+            });
+            grid.occupy(candidate);
+        }
+        
+        mst.compute();
+        remove_bad_stenier_points();
+    }
+
+    return mst.compute();
+}
+
+std::vector<Point> Batched1SteinerAlgo::generate_batch(const HananGrid& grid, MSTSolver& mst) {
+    struct CandidateParams {
+        Distance delta;
+        Point candidate;
+        std::vector<NodeId> affected;
+    };
+
+    std::vector<CandidateParams> candidates;
+    const auto current_cost = mst.compute();
+    
+    for (const auto& coord : grid.get_candidates()) {
+        const auto candidate_id = graph_.add_node({
+            .coord = coord,
+            .type = NodeType::kSteinerPoint,
+        });
+
+        if (const auto new_cost = mst.compute(); new_cost < current_cost) {
+            candidates.emplace_back(
+                current_cost - new_cost,
+                coord,
+                get_affected(candidate_id)
+            );
+        }
+        
+        graph_.remove_node(candidate_id);
+    }
+    
+    std::ranges::sort(candidates, std::greater{}, &CandidateParams::delta);
+
+    std::vector<Point> batch;
+    std::unordered_set<NodeId> used_nodes;
+
+    for (auto& [delta, candidate, affected] : candidates) {
+        
+        const bool has_intersection = std::ranges::any_of(affected, 
+            [&used_nodes](const NodeId node) { return used_nodes.contains(node); });
+        
+        if (!has_intersection) {
+            batch.push_back(std::move(candidate));
+            used_nodes.insert_range(affected);
+        }
+    }
+    
+    return batch;
+}
+
+std::vector<NodeId> Batched1SteinerAlgo::get_affected(NodeId candidate) {
+    // Simple heuristics for now
+    std::vector<NodeId> affected;
+    
+    for (const auto& other : graph_.node_edges(candidate) | std::views::transform([&](const auto& edge) {
+        const auto& [begin, end] = graph_.edge_nodes(edge);
+        return (begin == candidate ? end  : begin);
+    })) {
+        affected.push_back(other);
+    }
+    
+    return affected;
 }
 
 GraphVerifier::Review GraphVerifier::verify() {
