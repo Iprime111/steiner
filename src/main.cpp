@@ -18,11 +18,6 @@
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
-enum class UsedAlgo {
-    kBase,
-    kBatched,
-};
-
 namespace {
 steiner::JsonGraph read_json(const fs::path& input_path);
 void write_json(const fs::path& path, const steiner::JsonGraph& ctx);
@@ -36,14 +31,9 @@ int main(int argc, char** argv) try {
 
     bool measure_time = false;
     app.add_flag("-t,--time", measure_time, "Measure execution time.");
-
-    std::unordered_map<std::string, UsedAlgo> algo_option{{"Base", UsedAlgo::kBase},
-                                                          {"Batched", UsedAlgo::kBatched}};
-
-    auto used_algo = UsedAlgo::kBatched;
-    app.add_option("-a,--algorithm", used_algo, "Algorithm to be used for computation.")
-        ->capture_default_str()
-        ->transform(CLI::CheckedTransformer{algo_option, CLI::ignore_case});
+    
+    bool use_optimized = false;
+    app.add_flag("-m", use_optimized, "Use optimized algorithm.");
 
     size_t repeats = 1;
     app.add_option("-r,--repeat", repeats, "Repeats count for better time measurement.")
@@ -61,9 +51,7 @@ int main(int argc, char** argv) try {
             return;
         }
 
-        output_path = input_path;
-        auto new_filename = input_path.stem().string() + "_out" + input_path.extension().string();
-        output_path.replace_filename(new_filename);
+        output_path = "./" + input_path.stem().string() + "_out" + input_path.extension().string();
     });
 
     CLI11_PARSE(app, argc, argv);
@@ -74,6 +62,7 @@ int main(int argc, char** argv) try {
     auto graph = steiner::json_to_graph(json_graph);
     auto graph_backup = graph;
 
+    LOG_MESSAGE("Using {} algorithm", use_optimized ? "optimized" : "base");
     LOG_MESSAGE("Starting computation...");
     steiner::Timer<std::chrono::duration<double, std::milli>> timer;
     steiner::Distance final_cost = -1;
@@ -83,17 +72,13 @@ int main(int argc, char** argv) try {
         for (size_t repeat = 0; repeat < repeats; ++repeat) {
             graph = graph_backup;
 
-            switch (used_algo) {
-                case UsedAlgo::kBase: {
-                    steiner::Basic1SteinerAlgo steiner{graph};
-                    final_cost = steiner.compute();
-                    break;
-                }
-                case UsedAlgo::kBatched: {
-                    steiner::Batched1SteinerAlgo steiner{graph};
-                    final_cost = steiner.compute();
-                    break;
-                }
+            if (use_optimized) {
+                steiner::Batched1SteinerAlgo steiner{graph};
+                final_cost = steiner.compute();
+
+            } else {
+                steiner::Basic1SteinerAlgo steiner{graph};
+                final_cost = steiner.compute();
             }
         }
     }
@@ -111,7 +96,7 @@ int main(int argc, char** argv) try {
         fmt::println("Elapsed time: {:.3f} ms", timer.result().count());
     }
 
-    LOG_MESSAGE("Done!\nFinal graph cost: {}\nPonts added: {}", final_cost,
+    LOG_MESSAGE("Done!\nFinal graph cost: {}\nPoints added: {}", final_cost,
                 graph.nodes_count() - graph_backup.nodes_count());
 
     LOG_MESSAGE("Saving output to {}", output_path.string());
