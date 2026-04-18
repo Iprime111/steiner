@@ -31,9 +31,11 @@ cmake --build .
 git clone git@github.com:Iprime111/steiner.git
 cd steiner
 mkdir build && cd build
-cmake ..
+cmake .. -G "Visual Studio 18 2026" -A x64
 cmake --build . --config Release
 ```
+
+(Пример сборки для Visual Studio 18 2026 и x86_64)
 
 ### Использование
 

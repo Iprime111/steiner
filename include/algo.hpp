@@ -15,7 +15,13 @@
 namespace steiner {
 struct ManhattanMetric final {
     static constexpr Distance calculate(const Point& a, const Point& b) {
-        return std::abs(a.x - b.x) + std::abs(a.y - b.y);
+        return abs_internal(a.x - b.x) + abs_internal(a.y - b.y);
+    }
+    
+  private:
+    // std::abs is not constexpr in msvc
+    static constexpr Distance abs_internal(Distance val) {
+        return val < 0 ? -val : val;
     }
 };
 

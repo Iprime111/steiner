@@ -6,6 +6,7 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <algorithm>
+#include <concepts>
 #include <iterator>
 #include <limits>
 #include <nlohmann/json.hpp>
