@@ -34,6 +34,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(NodeType, {{NodeType::kSteinerPoint, "s"}, {NodeTyp
 
 struct JsonNode final {
     NodeId id;
+    std::string name;
     Point coord;
     NodeType type;
     std::vector<EdgeId> edges;
@@ -77,8 +78,8 @@ struct fmt::formatter<steiner::JsonNode> {
     constexpr auto parse(format_parse_context& ctx) { return ctx.begin(); }
 
     auto format(const steiner::JsonNode& n, format_context& ctx) const {
-        return fmt::format_to(ctx.out(), "Node(id={}, coord={}, type={}, edges=[{}])", n.id, n.coord, n.type,
-                              fmt::join(n.edges, ", "));
+        return fmt::format_to(ctx.out(), "Node(id={}, name={}, coord={}, type={}, edges=[{}])", n.id, n.name,
+                              n.coord, n.type, fmt::join(n.edges, ", "));
     }
 };
 

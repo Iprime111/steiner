@@ -17,12 +17,10 @@ struct ManhattanMetric final {
     static constexpr Distance calculate(const Point& a, const Point& b) {
         return abs_internal(a.x - b.x) + abs_internal(a.y - b.y);
     }
-    
+
   private:
     // std::abs is not constexpr in msvc
-    static constexpr Distance abs_internal(Distance val) {
-        return val < 0 ? -val : val;
-    }
+    static constexpr Distance abs_internal(Distance val) { return val < 0 ? -val : val; }
 };
 
 class HananGrid final {
@@ -87,33 +85,34 @@ class Basic1SteinerAlgo {
   public:
     Basic1SteinerAlgo(DefaultGraph& graph) : graph_(graph) {}
     virtual ~Basic1SteinerAlgo() = default;
-    
+
     Distance compute();
 
   protected:
-    Distance compute_cost_with_candidate(Point coord, MSTSolver& mst) ;
+    Distance compute_cost_with_candidate(Point coord, MSTSolver& mst);
     void remove_bad_stenier_points();
+    NodeId insert_steiner_point(Point coord);
 
   private:
     std::pair<Point, bool> choose_candidate(const HananGrid& grid, MSTSolver& mst);
-    
+
   protected:
     DefaultGraph& graph_;
 };
 
 class Batched1SteinerAlgo final : protected Basic1SteinerAlgo {
-  using Base = Basic1SteinerAlgo;
-  
+    using Base = Basic1SteinerAlgo;
+
   public:
     Batched1SteinerAlgo(DefaultGraph& graph) : Base(graph) {}
     virtual ~Batched1SteinerAlgo() override = default;
-    
+
     Distance compute();
-    
+
   private:
     std::vector<Point> generate_batch(const HananGrid& grid, MSTSolver& mst);
     std::vector<NodeId> get_affected(NodeId candidate);
-    
+
     Graph<Point, DefaultEdgeData> conflict_graph_;
 };
 

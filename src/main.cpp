@@ -13,7 +13,6 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <ratio>
-#include <unordered_map>
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
@@ -31,7 +30,7 @@ int main(int argc, char** argv) try {
 
     bool measure_time = false;
     app.add_flag("-t,--time", measure_time, "Measure execution time.");
-    
+
     bool use_optimized = false;
     app.add_flag("-m", use_optimized, "Use optimized algorithm.");
 
@@ -83,6 +82,9 @@ int main(int argc, char** argv) try {
         }
     }
 
+    LOG_MESSAGE("Done!\nFinal graph cost: {}\nPoints added: {}", final_cost,
+                graph.nodes_count() - graph_backup.nodes_count());
+
     if (verify) {
         auto review = steiner::GraphVerifier{graph}.verify();
         LOG_MESSAGE("{}", review);
@@ -95,10 +97,7 @@ int main(int argc, char** argv) try {
     if (measure_time) {
         fmt::println("Elapsed time: {:.3f} ms", timer.result().count());
     }
-
-    LOG_MESSAGE("Done!\nFinal graph cost: {}\nPoints added: {}", final_cost,
-                graph.nodes_count() - graph_backup.nodes_count());
-
+    
     LOG_MESSAGE("Saving output to {}", output_path.string());
     write_json(output_path, steiner::graph_to_json(graph));
 } catch (const std::exception& ex) {

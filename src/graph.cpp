@@ -4,11 +4,13 @@
 
 namespace steiner {
 DefaultGraph json_to_graph(const JsonGraph& json) {
-    using NodeDataType = DefaultGraph::NodeDataType;
-
-    std::unordered_map<NodeId, NodeDataType> init_nodes;
+    std::unordered_map<NodeId, DefaultNodeData> init_nodes;
     for (const auto& j_node : json.node) {
-        init_nodes.emplace(j_node.id, NodeDataType{j_node.coord, j_node.type});
+        init_nodes.emplace(j_node.id, DefaultNodeData{
+            .coord = j_node.coord,
+            .type = j_node.type,
+            .name = j_node.name,
+        });
     }
 
     DefaultGraph graph{std::move(init_nodes)};
@@ -34,6 +36,7 @@ JsonGraph graph_to_json(const DefaultGraph& graph) {
         const auto& data = graph.node_data(node_id);
         jn.coord = data.coord;
         jn.type = data.type;
+        jn.name = data.name;
 
         const auto& edges = graph.node_edges(node_id);
         jn.edges.assign(edges.begin(), edges.end());

@@ -56,9 +56,8 @@ class Graph final {
 
     const auto& node_edges(NodeId id) const { return nodes_.at(id).first.edges; }
     auto node_edges() const {
-        return nodes_ | std::views::values | std::views::transform([](auto&& node_pair) {
-            return node_pair.first.edges;
-        });
+        return nodes_ | std::views::values |
+               std::views::transform([](auto&& node_pair) { return node_pair.first.edges; });
     }
 
     const auto& edge_data(EdgeId id) const { return edges_.at(id).second; }
@@ -91,32 +90,31 @@ class Graph final {
         nodes_.emplace(last_node_id_, std::make_pair(Node{}, std::move(node)));
         return last_node_id_;
     }
-    
+
     void remove_node(NodeId id) {
         auto node_it = nodes_.find(id);
- 
+
         if (node_it == std::end(nodes_)) {
             throw std::out_of_range{fmt::format("Node {} not found", id)};
         }
-        
-        
+
         for (auto&& edge : node_it->second.first.edges) {
             NodeId other = kInvalidNodeId;
-            
+
             auto edgeStruct = edges_[edge].first;
-            
+
             if (edgeStruct.begin == id) {
                 other = edgeStruct.end;
             } else {
                 other = edgeStruct.begin;
             }
-            
+
             nodes_[other].first.edges.erase(edge);
             edges_.erase(edge);
         }
-        
+
         nodes_.erase(node_it);
-        
+
         if (last_node_id_ == id) {
             --last_node_id_;
         }
@@ -130,10 +128,10 @@ class Graph final {
 
         update_last_id(last_edge_id_, id_hint);
         edges_.emplace(last_edge_id_, std::make_pair(Edge{begin, end}, std::move(edge)));
-        
+
         nodes_[begin].first.edges.insert(last_edge_id_);
         nodes_[end].first.edges.insert(last_edge_id_);
-        
+
         return last_edge_id_;
     }
 
@@ -147,7 +145,7 @@ class Graph final {
         nodes_[edge_it->second.first.begin].first.edges.erase(id);
         nodes_[edge_it->second.first.end].first.edges.erase(id);
         edges_.erase(edge_it);
-        
+
         if (last_edge_id_ == id) {
             --last_edge_id_;
         }
@@ -174,6 +172,7 @@ struct DefaultEdgeData final {};
 struct DefaultNodeData final {
     Point coord;
     NodeType type;
+    std::string name;
 };
 
 using DefaultGraph = Graph<DefaultNodeData, DefaultEdgeData>;

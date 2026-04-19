@@ -6,11 +6,8 @@ namespace steiner {
 using json = nlohmann::json;
 
 void to_json(json& j, const JsonNode& n) {
-    j = json{{"id", n.id}, {"x", n.coord.x}, {"y", n.coord.y}, {"type", n.type}};
-
-    if (!n.edges.empty()) {
-        j["edges"] = n.edges;
-    }
+    j = json{{"id", n.id},     {"name", n.name}, {"x", n.coord.x},
+             {"y", n.coord.y}, {"type", n.type}, {"edges", n.edges}};
 }
 
 void from_json(const json& j, JsonNode& n) {
@@ -23,6 +20,12 @@ void from_json(const json& j, JsonNode& n) {
         j.at("edges").get_to(n.edges);
     } else {
         n.edges.clear();
+    }
+
+    if (j.contains("name")) {
+        j.at("name").get_to(n.name);
+    } else {
+        n.name.clear();
     }
 }
 
