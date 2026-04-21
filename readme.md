@@ -27,7 +27,7 @@ cmake --build .
 
 **Windows:**
 
-```basю
+```bash
 git clone git@github.com:Iprime111/steiner.git
 cd steiner
 mkdir build && cd build
